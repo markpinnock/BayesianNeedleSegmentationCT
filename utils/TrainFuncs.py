@@ -37,9 +37,9 @@ def varDropout(imgs, Model, T):
     pred_array = np.zeros((arr_dims[0], arr_dims[1], arr_dims[2], arr_dims[3], T))
 
     for t in range(T):
-        pred_array[:, :, :, :, t] = np.squeeze(Model(imgs, training=False).numpy())
+        pred_array[:, :, :, :, t] = np.squeeze(Model(imgs, training=True).numpy())
 
     pred_mean = np.mean(pred_array, axis=4)
     pred_var = np.var(pred_array, axis=4)
 
-    return pred_mean, pred_var
+    return pred_mean, pred_var, pred_array

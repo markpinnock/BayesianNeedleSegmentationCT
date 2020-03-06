@@ -50,7 +50,7 @@ pred_var = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
 for img, seg in test_ds.batch(MB_SIZE):
     fig, axs = plt.subplots(MB_SIZE, 7)
     pred = UNetStandard(img, training=False)
-    pred_mean[:, :, :, :, 0], pred_var[:, :, :, :, 0] = varDropout(img, UNetDropout, T=100)
+    pred_mean[:, :, :, :, 0], pred_var[:, :, :, :, 0], _ = varDropout(img, UNetDropout, T=100)
     temp_metric = diceLoss(pred, seg)
     temp_drop_metric = diceLoss(pred_mean, seg)
     test_metric += temp_metric

@@ -204,7 +204,7 @@ for j in range(NUM_EX):
         rgb_pred[j, :, :, :, 0] = np.squeeze(data[1])
 
 pred = UNet(drop_imgs, training=False)
-pred_mean, pred_var = varDropout(drop_imgs, UNet, T=100)
+pred_mean, pred_var, _ = varDropout(drop_imgs, UNet, T=100)
 rgb_pred[:, :, :, :, 1] = pred[:, :, :, :, 0].numpy()
 rgb_pred[:, :, :, :, 2] = pred[:, :, :, :, 0].numpy()
 
