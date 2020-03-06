@@ -9,7 +9,6 @@ sys.path.append('..')
 sys.path.append("C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/scripts/training/")
 
 from Networks import UNetGen
-from utils.TrainFuncs import varDropout
 
 
 def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, prior_flag=False):
