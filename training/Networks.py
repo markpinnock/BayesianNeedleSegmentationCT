@@ -43,7 +43,7 @@ def UNetGen(input_shape, starting_channels, drop_rate=0.0, dropout_flag=True):
     skip4, dnres4 = dnResNetBlock(nc * 8, dnres3, drop_rate, dropout_flag)
     dn5 = keras.layers.Conv3D(nc * 16, (3, 3, 3), strides=(1, 1, 1), padding='same')(dnres4)
     BN5 = tf.nn.relu(keras.layers.BatchNormalization()(dn5))
-    drop5 = keras.layers.Dropout(drop_rate)(BN5)
+    drop5 = keras.layers.Dropout(drop_rate)(BN5, training=dropout_flag)
 
     upres4 = upResNetBlock(nc * 8, drop5, skip4, (2, 2, 1), drop_rate, dropout_flag)
     upres3 = upResNetBlock(nc * 4, upres4, skip3, (2, 2, 1), drop_rate, dropout_flag)
