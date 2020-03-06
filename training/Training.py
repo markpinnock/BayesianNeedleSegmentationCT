@@ -16,13 +16,15 @@ sys.path.append('/home/mpinnock/Robot/003_CNN_Bayes_Traj/')
 from Networks import UNetGen
 from utils.DataLoader import imgLoader
 from utils.TrainFuncs import trainStep, valStep, varDropout
+from utils.TransGen import TransMatGen
+from utils.Transformation import affineTransformation
 
 
 # Handle arguments
 parser = ArgumentParser()
 parser.add_argument('--file_path', '-fp', help="File path", type=str)
 parser.add_argument('--data_path', '-dp', help="Data path", type=str)
-# parser.add_argument('--data_aug', '-da', help="Data augmentation", action='store_true')
+parser.add_argument('--data_aug', '-da', help="Data augmentation", action='store_true')
 parser.add_argument('--minibatch_size', '-mb', help="Minibatch size", type=int, nargs='?', const=4, default=4)
 parser.add_argument('--num_chans', '-nc', help="Starting number of channels", type=int, nargs='?', const=4, default=4)
 parser.add_argument('--epochs', '-ep', help="Number of epochs", type=int, nargs='?', const=5, default=5)
@@ -42,6 +44,17 @@ if arguments.data_path == None:
     DATA_PATH = "Z:/Robot_Data/Train/"
 else:
     DATA_PATH = arguments.data_path
+
+AUG_FLAG = arguments.data_aug
+
+if AUG_FLAG:
+    DataAug = TransMatGen()
+#     aug_dict = {
+#         'flip': 0.5,
+#         'rot': 45,
+#         'scale': 0.25,
+#         'shear': None
+#     }
 
 # Set hyperparameters
 MB_SIZE = arguments.minibatch_size
@@ -157,6 +170,11 @@ start_time = time.time()
 # Training
 for epoch in range(EPOCHS):
     for img, seg in train_ds.batch(MB_SIZE):
+        if AUG_FLAG:
+            trans_mat = DataAug.transMatGen(img.shape[0])
+            img = affineTransformation(img, trans_mat)
+            seg = affineTransformation(seg, trans_mat)
+
         train_metric += trainStep(img, seg, UNet, Optimiser)
         train_count += 1
 
@@ -195,7 +213,7 @@ fig, axs = plt.subplots(NUM_EX, 4)
 for j in range(NUM_EX):
     axs[j, 0].imshow(np.fliplr(drop_imgs[j, :, :, 1, 0].T), cmap='gray', vmin=0.12, vmax=0.18, origin='lower')
     axs[j, 0].axis('off')
-    # axs[j, 0].imshow(np.fliplr(np.ma.masked_where(pred[j, :, :, 1, 0].numpy().T == False, pred[j, :, :, 1, 0].numpy().T)), cmap='Set1', origin='lower')
+    # axs[j, 0].imshow(np.fliplr(np.ma.masked_where(pred[j, :, :, 1, 0].numpy().T == False, pred[j, :, :, 1, 0].numpy().T)), cmap='hot', origin='lower')
     axs[j, 0].imshow(np.fliplr(pred[j, :, :, 1, 0].numpy().T), cmap='hot', alpha=0.3, origin='lower')
     axs[j, 0].axis('off')
     r_pred = np.fliplr(rgb_pred[j, :, :, 1, 0].T)
