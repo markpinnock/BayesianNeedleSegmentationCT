@@ -11,7 +11,7 @@ import tensorflow as tf
 import time
 
 sys.path.append('..')
-sys.path.append('/home/mpinnock/Robot/003_CNN_Bayes_Traj/')
+sys.path.append('/home/mpinnock/Traj/003_CNN_Bayes_Traj/')
 
 from Networks import UNetGen
 from utils.DataLoader import imgLoader
