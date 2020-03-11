@@ -117,10 +117,10 @@ def interpolate(input_vol, X, Y, mb_size):
     y0_f = tf.cast(y0, 'float32')
     y1_f = tf.cast(y1, 'float32')
 
-    wa = tf.repeat(((x1_f - X) * (y1_f - Y)), 1)[:, tf.newaxis]
-    wb = tf.repeat(((x1_f - X) * (Y - y0_f)), 1)[:, tf.newaxis]
-    wc = tf.repeat(((X - x0_f) * (y1_f - Y)), 1)[:, tf.newaxis]
-    wd = tf.repeat(((X - x0_f) * (Y - y0_f)), 1)[:, tf.newaxis]
+    wa = ((x1_f - X) * (y1_f - Y))[:, tf.newaxis]
+    wb = ((x1_f - X) * (Y - y0_f))[:, tf.newaxis]
+    wc = ((X - x0_f) * (y1_f - Y))[:, tf.newaxis]
+    wd = ((X - x0_f) * (Y - y0_f))[:, tf.newaxis]
 
     # Add weighted imgs from each of four indices and return img_vol
     output_vol_1 = tf.reshape(tf.add_n([wa * ImgA1, wb * ImgB1, wc * ImgC1, wd * ImgD1]), [mb_size, height, width])

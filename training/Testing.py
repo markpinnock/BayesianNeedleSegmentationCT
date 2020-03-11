@@ -13,11 +13,11 @@ from utils.TrainFuncs import diceLoss, varDropout
 
 MB_SIZE = 4
 NC = 4
-EPOCHS = 1
+EPOCHS = 500
 ETA = 0.001
 
 FILE_PATH = "C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/"
-DATA_PATH = "Z:/Robot_Data/Test/"
+DATA_PATH = "Z:/Robot_Data/Train/"
 EXPT_NAME = f"nc{NC}_ep{EPOCHS}_eta{ETA}"
 MODEL_SAVE_PATH = f"{FILE_PATH}models/{EXPT_NAME}/"
 img_path = f"{DATA_PATH}Img/"
@@ -64,7 +64,7 @@ for img, seg in test_ds.batch(MB_SIZE):
     rgb_drop[:, :, :, :, 1] = pred_mean[:, :, :, :, 0]
     rgb_drop[:, :, :, :, 2] = pred_mean[:, :, :, :, 0]
 
-    for j in range(MB_SIZE):
+    for j in range(img.shape[0]):
         axs[j, 0].imshow(np.fliplr(img[j, :, :, 1, 0].numpy().T), cmap='gray', vmin=0.12, vmax=0.18, origin='lower')
         axs[j, 0].axis('off')
         axs[j, 1].imshow(np.fliplr(img[j, :, :, 1, 0].numpy().T), cmap='gray', vmin=0.12, vmax=0.18, origin='lower')
