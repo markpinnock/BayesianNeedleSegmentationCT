@@ -8,7 +8,8 @@ import tensorflow as tf
 sys.path.append('..')
 sys.path.append("C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/scripts/training/")
 
-from Networks import UNetGen
+from utils.TransGen import TransMatGen
+from utils.Transformation import affineTransformation
 
 
 def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, prior_flag=False):
@@ -32,7 +33,8 @@ def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, 
             final_seg_list = [seg.decode("utf-8") for seg in seg_list if img_name[:-9] in seg.decode("utf-8")]
             final_seg_list.sort()
             seg_name = final_seg_list[-1]
-
+            # seg_name = seg_list[i].decode("utf-8")
+            # print(img_name, seg_name)
             seg_vol = np.load(seg_path + seg_name).astype(np.float32)
             seg_vol = seg_vol[:, :, :, np.newaxis]
 
@@ -63,7 +65,7 @@ def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, 
 
 if __name__ == "__main__":
 
-    FILE_PATH = "Z:/Robot_Data/"
+    FILE_PATH = "Z:/Robot_Data/Test/"
     img_path = f"{FILE_PATH}Img/"
     seg_path = f"{FILE_PATH}Seg/"
 
@@ -113,22 +115,31 @@ if __name__ == "__main__":
     print(f"N: {N}, val: {len(img_val)}, train: {len(img_train)}, val + train: {len(img_val) + len(img_train)}")
     
     train_ds = tf.data.Dataset.from_generator(
-        imgLoader, args=[img_path, seg_path, img_train, seg_train, priors, True, False], output_types=(tf.float32, tf.float32))
+        imgLoader, args=[img_path, seg_path, img_train, seg_train, priors, False, False], output_types=(tf.float32, tf.float32))
 
     val_ds = tf.data.Dataset.from_generator(
         imgLoader, args=[img_path, seg_path, img_val, seg_val, priors, False, False], output_types=(tf.float32, tf.float32))
-    
-    for data in train_ds.batch(MB_SIZE):
-        print(data[0].shape, data[1].shape)
+
+    DataAug = TransMatGen()
+
+    for img, seg in train_ds.batch(MB_SIZE):
+        print(img.shape, seg.shape)
+        # trans_mat = DataAug.transMatGen(img.shape[0])
+        # img = affineTransformation(img, trans_mat)
+        # seg = affineTransformation(seg, trans_mat)
+
         plt.subplot(1, 2, 1)
-        plt.imshow(np.fliplr(data[0][0, :, :, 1, 0].numpy().T), cmap='gray', origin='lower', vmin=0.12, vmax=0.18)
+        plt.axis('off')
+        plt.imshow(np.fliplr(img[0, :, :, 1, 0].numpy().T), cmap='gray', origin='lower', vmin=0.12, vmax=0.18)
         plt.subplot(1, 2, 2)
-        plt.imshow(np.fliplr(data[1][0, :, :, 1, 0].numpy().T), cmap='gray', origin='lower', vmin=0.12, vmax=0.18)
+        plt.axis('off')
+        plt.imshow(np.fliplr(seg[0, :, :, 1, 0].numpy().T), cmap='gray', origin='lower', vmin=0.12, vmax=0.18)
         # pred = UNetPrior(data[2])
         # _, pred_var = varDropout(data[2], UNetPrior, T=10)
         # plt.subplot(1, 3, 3)
         # plt.imshow(np.fliplr(pred_var[0, :, :, 1].T), cmap='hot', origin='lower')
-        plt.pause(2)
+        # plt.pause(2)
+        plt.show()
     
     for data in val_ds.batch(MB_SIZE):
         print(data[0].shape, data[1].shape)
