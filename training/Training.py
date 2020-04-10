@@ -72,7 +72,7 @@ if FOLD >= NUM_FOLDS and NUM_FOLDS != 0:
 GPU = arguments.gpu
 
 # Generate experiment name and save paths
-EXPT_NAME = f"nc{NC}_ep{EPOCHS}_eta{ETA}"
+EXPT_NAME = "spatial_dropout" #f"nc{NC}_ep{EPOCHS}_eta{ETA}"
 
 if NUM_FOLDS > 0:
     EXPT_NAME += f"_cv{FOLD}"
