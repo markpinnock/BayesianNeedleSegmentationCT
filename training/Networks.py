@@ -13,7 +13,7 @@ def dnResNetBlock(nc, inputlayer, drop_rate, dropout_flag):
     BN2 = keras.layers.SpatialDropout3D(drop_rate)(BN2, training=dropout_flag)
 
     pool = keras.layers.MaxPool3D((2, 2, 1), strides=(2, 2, 1), padding='same')(BN2)
-    return BN2, pool
+    return BN1, BN2, pool
 
 
 def upResNetBlock(nc, inputlayer, skip, tconv_strides, drop_rate, dropout_flag):
@@ -30,27 +30,35 @@ def upResNetBlock(nc, inputlayer, skip, tconv_strides, drop_rate, dropout_flag):
     BN3 = tf.nn.relu(keras.layers.BatchNormalization()(conv2))
     BN3 = keras.layers.SpatialDropout3D(drop_rate)(BN3, training=dropout_flag)
 
-    return BN3
+    return BN1, BN2, BN3
 
 
-def UNetGen(input_shape, starting_channels, drop_rate=0.0, dropout_flag=True):
+def UNetGen(input_shape, starting_channels, drop_rate=0.0, dropout_flag=True, return_all=False):
     inputlayer = keras.layers.Input(shape=input_shape)
     nc = starting_channels
 
-    skip1, dnres1 = dnResNetBlock(nc, inputlayer, drop_rate, dropout_flag)
-    skip2, dnres2 = dnResNetBlock(nc * 2, dnres1, drop_rate, dropout_flag)
-    skip3, dnres3 = dnResNetBlock(nc * 4, dnres2, drop_rate, dropout_flag)
-    skip4, dnres4 = dnResNetBlock(nc * 8, dnres3, drop_rate, dropout_flag)
+    conv1_1, conv2_1, dnres1 = dnResNetBlock(nc, inputlayer, drop_rate, dropout_flag)
+    conv1_2, conv2_2, dnres2 = dnResNetBlock(nc * 2, dnres1, drop_rate, dropout_flag)
+    conv1_3, conv2_3, dnres3 = dnResNetBlock(nc * 4, dnres2, drop_rate, dropout_flag)
+    conv1_4, conv2_4, dnres4 = dnResNetBlock(nc * 8, dnres3, drop_rate, dropout_flag)
+
     dn5 = keras.layers.Conv3D(nc * 16, (3, 3, 3), strides=(1, 1, 1), padding='same')(dnres4)
     BN5 = tf.nn.relu(keras.layers.BatchNormalization()(dn5))
-    drop5 = keras.layers.SpatialDropout3D(drop_rate)(BN5, training=dropout_flag)
+    BN5 = keras.layers.SpatialDropout3D(drop_rate)(BN5, training=dropout_flag)
 
-    upres4 = upResNetBlock(nc * 8, drop5, skip4, (2, 2, 1), drop_rate, dropout_flag)
-    upres3 = upResNetBlock(nc * 4, upres4, skip3, (2, 2, 1), drop_rate, dropout_flag)
-    upres2 = upResNetBlock(nc * 2, upres3, skip2, (2, 2, 1), drop_rate, dropout_flag)
-    upres1 = upResNetBlock(nc, upres2, skip1, (2, 2, 1), drop_rate, dropout_flag)
+    upres6, conv1_6, conv2_6 = upResNetBlock(nc * 8, BN5, conv2_4, (2, 2, 1), drop_rate, dropout_flag)
+    upres7, conv1_7, conv2_7 = upResNetBlock(nc * 4, upres6, conv2_3, (2, 2, 1), drop_rate, dropout_flag)
+    upres8, conv1_8, conv2_8 = upResNetBlock(nc * 2, upres7, conv2_2, (2, 2, 1), drop_rate, dropout_flag)
+    upres9, conv1_9, conv2_9 = upResNetBlock(nc, upres8, conv2_1, (2, 2, 1), drop_rate, dropout_flag)
 
-    outputlayer = keras.layers.Conv3D(1, (1, 1, 1), strides=(1, 1, 1), padding='same', activation='sigmoid')(upres1)
+    outputlayer = keras.layers.Conv3D(1, (1, 1, 1), strides=(1, 1, 1), padding='same', activation='sigmoid')(upres9)
 
-    return keras.Model(inputs=inputlayer, outputs=outputlayer)
+    if return_all:
+        output_list = [conv1_1, conv2_1, dnres1, conv1_2, conv2_2, dnres2, conv1_3, conv2_3, dnres3,
+                       conv1_4, conv2_4, dnres4, BN5, upres6, conv1_6, conv2_6,
+                       upres7, conv1_6, conv2_6, upres8, conv1_8, conv2_8, upres9, conv1_9, conv2_9, outputlayer]
+    else:
+        output_list = outputlayer
+
+    return keras.Model(inputs=inputlayer, outputs=output_list)
 
