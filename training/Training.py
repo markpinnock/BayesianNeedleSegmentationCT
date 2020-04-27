@@ -24,6 +24,7 @@ from utils.Transformation import affineTransformation
 parser = ArgumentParser()
 parser.add_argument('--file_path', '-fp', help="File path", type=str)
 parser.add_argument('--data_path', '-dp', help="Data path", type=str)
+parser.add_argument('--dropout', '-dr', help="Dropout type", type=str)
 parser.add_argument('--data_aug', '-da', help="Data augmentation", action='store_true')
 parser.add_argument('--minibatch_size', '-mb', help="Minibatch size", type=int, nargs='?', const=4, default=4)
 parser.add_argument('--num_chans', '-nc', help="Starting number of channels", type=int, nargs='?', const=4, default=4)
@@ -44,6 +45,15 @@ if arguments.data_path == None:
     DATA_PATH = "Z:/Robot_Data/Train/"
 else:
     DATA_PATH = arguments.data_path
+
+if arguments.dropout == None:
+    DROPOUT_TYPE = None
+elif arguments.dropout == 'standard':
+    DROPOUT_TYPE = 'standard'
+elif arguments.dropout == 'spatial':
+    DROPOUT_TYPE = 'spatial'
+else:
+    raise ValueError("Select valid dropout type")
 
 AUG_FLAG = arguments.data_aug
 
@@ -72,7 +82,14 @@ if FOLD >= NUM_FOLDS and NUM_FOLDS != 0:
 GPU = arguments.gpu
 
 # Generate experiment name and save paths
-EXPT_NAME = "spatial_dropout" #f"nc{NC}_ep{EPOCHS}_eta{ETA}"
+if DROPOUT_TYPE == None:
+    EXPT_NAME = f"nc{NC}_ep{EPOCHS}_eta{ETA}"
+elif DROPOUT_TYPE == 'standard':
+    EXPT_NAME = f"nc{NC}_ep{EPOCHS}_eta{ETA}_std"
+elif DROPOUT_TYPE == 'spatial':
+    EXPT_NAME = f"nc{NC}_ep{EPOCHS}_eta{ETA}_spa"
+else:
+    raise ValueError("Invalid expt name")
 
 if NUM_FOLDS > 0:
     EXPT_NAME += f"_cv{FOLD}"
@@ -142,7 +159,7 @@ else:
     seg_examples = [s.encode("utf-8") for s in seg_examples]
 
 # Initialise model
-UNet = UNetGen(input_shape=IMG_SIZE, starting_channels=NC, drop_rate=DROP_RATE)
+UNet = UNetGen(input_shape=IMG_SIZE, starting_channels=NC, dropout_type=DROPOUT_TYPE, drop_rate=DROP_RATE)
 
 # Create dataset
 train_ds = tf.data.Dataset.from_generator(
