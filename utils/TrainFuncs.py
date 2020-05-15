@@ -40,6 +40,11 @@ def varDropout(imgs, Model, T):
         pred_array[:, :, :, :, t] = np.squeeze(Model(imgs, training=False).numpy())
 
     pred_mean = np.mean(pred_array, axis=4)
-    pred_var = np.var(pred_array, axis=4)
+    # pred_var = np.var(pred_array, axis=4)
+    class_1 = np.copy(pred_mean)
+    class_2 = np.abs(1 - np.copy(pred_mean))
+    p_vec = np.concatenate([class_1[:, :, :, :, np.newaxis], class_2[:, :, :, :, np.newaxis]], axis=4)
+    entropies = -np.mean(p_vec * np.log(p_vec), axis=4)
+    entropies[np.isnan(entropies)] = 0
 
-    return pred_mean, pred_var, pred_array
+    return pred_mean, entropies, pred_array
