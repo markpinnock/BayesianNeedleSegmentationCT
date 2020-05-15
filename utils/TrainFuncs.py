@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -10,6 +11,23 @@ def diceLoss(pred, mask):
     dice = numer / denom
 
     return 1 - tf.reduce_mean(dice)
+
+
+def haussdorfDistance(pred, mask, pix_sp):
+    def dist(a, b, pix_sp):
+        d = (a - b) * pix_sp
+        return np.sqrt(d @ d.T)
+
+    X = np.argwhere(pred[0, :, :, 0] == 1)
+    Y = np.argwhere(mask[0, :, :, 0] == 1)
+
+    if X.sum() == 0:
+        return 1000
+
+    d1 = max(min(dist(X[i, :], Y[j, :], pix_sp) for i in range(X.shape[0])) for j in range(Y.shape[0]))
+    d2 = max(min(dist(X[i, :], Y[j, :], pix_sp) for j in range(Y.shape[0])) for i in range(X.shape[0]))
+
+    return max(d1, d2)
 
 
 @tf.function
