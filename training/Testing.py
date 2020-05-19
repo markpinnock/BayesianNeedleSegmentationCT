@@ -9,7 +9,7 @@ sys.path.append('..')
 
 from Networks import UNetGen
 from utils.DataLoader import imgLoader
-from utils.TrainFuncs import diceLoss, varDropout
+from utils.TrainFuncs import diceLoss, NMSCalc, varDropout
 
 
 MB_SIZE = 4
@@ -100,7 +100,12 @@ for img, seg in test_ds.batch(MB_SIZE):
             axs[i, 5].axis('off')
             axs[i, 6].imshow(np.fliplr(pred_entropy[i, :, :, j, 0].T), cmap='hot', origin='lower')
             axs[i, 6].axis('off')
-            axs[i, 6].set_title(mean_entropy[i, j])
+
+            NMS = NMSCalc(pred[i, :, :, 1, 0], 0.5, test=False)
+            axs[i, 3].set_title(f"{NMS:.6f}")
+            NMS = NMSCalc(pred_mean[i, :, :, 1, 0], 0.5, test=False)
+            axs[i, 4].set_title(f"{NMS:.6f}")
+            axs[i, 6].set_title(f"{mean_entropy[i, j]:.6f}")
 
         plt.show()
 

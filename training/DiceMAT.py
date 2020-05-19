@@ -8,7 +8,7 @@ sys.path.append('..')
 
 from Networks import UNetGen
 from utils.DataLoader import imgLoader
-from utils.TrainFuncs import diceLoss, haussdorfDistance, varDropout
+from utils.TrainFuncs import diceLoss, haussdorfDistance, NMSCalc, varDropout
 
 
 MB_SIZE = 1
@@ -76,6 +76,7 @@ dist_std = []
 dist_drop_1 = []
 dist_drop_2 = []
 var_drop_2 = []
+nms_drop_2 = []
 
 
 for img, seg in test_ds.batch(MB_SIZE):
@@ -110,6 +111,7 @@ for img, seg in test_ds.batch(MB_SIZE):
     dist_drop_2.append(haussdorfDistance(pred_drop_2[:, :, :, 1, :], seg[:, :, :, 1, :], pixel_spacing))
 
     var_drop_2.append(pred_var.mean())
+    nms_drop_2.append(NMSCalc(pred_drop_2[0, :, :, 1, 0], THRESH))
 
     print(
         1 - diceLoss(pred_std, seg).numpy(),
@@ -132,7 +134,8 @@ list_dict = {
     'dist_std': dist_std,
     'dist_drop_1': dist_drop_1,
     'dist_drop_2': dist_drop_2,
-    'var_drop_2': var_drop_2
+    'var_drop_2': var_drop_2,
+    'nms_drop_2': nms_drop_2
 }
 
 io.savemat(f"{SAVE_PATH}dice_var_2.mat", list_dict)
