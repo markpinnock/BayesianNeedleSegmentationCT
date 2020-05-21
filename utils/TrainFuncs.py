@@ -138,7 +138,11 @@ def varDropout(imgs, Model, T, threshold):
     class_1 = np.copy(pred_mean)
     class_2 = np.abs(1 - np.copy(pred_mean))
     p_vec = np.concatenate([class_1[:, :, :, :, np.newaxis], class_2[:, :, :, :, np.newaxis]], axis=4)
+    p_vec[p_vec == 0.0] = 1e-8
     entropies = -np.mean(p_vec * np.log(p_vec), axis=4)
-    entropies[np.isnan(entropies)] = 0
+
+    pred_mean[pred_mean < 1e-7] = 0
+    entropies[entropies < 1e-7] = 0
+    pred_array[pred_array < 1e-7] = 0
 
     return pred_mean, entropies, pred_array
