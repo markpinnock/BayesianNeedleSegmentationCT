@@ -120,12 +120,18 @@ def valStep(imgs, labels, Model):
 
 
 # DEACTIVATE BN AND DROPOUT SEPARATELY
-def varDropout(imgs, Model, T):
+def varDropout(imgs, Model, T, threshold):
     arr_dims = imgs.shape
     pred_array = np.zeros((arr_dims[0], arr_dims[1], arr_dims[2], arr_dims[3], T))
 
     for t in range(T):
         pred_array[:, :, :, :, t] = np.squeeze(Model(imgs, training=False).numpy())
+
+    if threshold == None:
+        pass
+    else:
+        pred_array[pred_array < threshold] = 0
+        pred_array[pred_array >= threshold] = 1
 
     pred_mean = np.mean(pred_array, axis=4)
     # pred_var = np.var(pred_array, axis=4)
