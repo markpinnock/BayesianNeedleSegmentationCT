@@ -37,6 +37,7 @@ segs.sort()
 
 N = len(imgs)
 assert N == len(segs), "HI/LO IMG PAIRS UNEVEN LENGTHS"
+assert MB_SIZE == 1, "MUST USE MINIBATCH SIZE 1"
 
 LO_VOL_SIZE = (512, 512, 3, 1, )
 
@@ -52,7 +53,7 @@ UNetDropout2.load_weights(f"{MODEL_SAVE_PATH}{EXPT_NAME}")
 
 pred_drop_1 = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
 pred_drop_2 = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
-pred_var = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
+pred_entropy = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
 
 save_count = 0
 idx = 0 + START_IDX
@@ -76,6 +77,8 @@ dist_std = []
 dist_drop_1 = []
 dist_drop_2 = []
 var_drop_2 = []
+nms_std = []
+nms_drop_1 = []
 nms_drop_2 = []
 
 
@@ -117,11 +120,13 @@ for img, seg in test_ds.batch(MB_SIZE):
     nms_drop_1.append(NMSCalc(pred_drop_1[0, :, :, 1, 0], THRESH))
     nms_drop_2.append(NMSCalc(pred_drop_2[0, :, :, 1, 0], THRESH))
 
-    print(
-        1 - diceLoss(pred_std, seg).numpy(),
-        1 - diceLoss(pred_drop_1, seg).numpy(),
-        1 - diceLoss(pred_drop_2, seg).numpy()
-    )
+    # print(
+    #     1 - diceLoss(pred_std, seg).numpy(),
+    #     1 - diceLoss(pred_drop_1, seg).numpy(),
+    #     1 - diceLoss(pred_drop_2, seg).numpy()
+    # )
+
+    print(f"{imgs[idx]}, {NMSCalc(pred_drop_2[0, :, :, 1, 0], THRESH)}")
 
     # print(
     #     haussdorfDistance(pred_std[:, :, :, 1, :], seg[:, :, :, 1, :]),
@@ -139,7 +144,9 @@ list_dict = {
     'dist_drop_1': dist_drop_1,
     'dist_drop_2': dist_drop_2,
     'var_drop_2': var_drop_2,
+    'nms_std': nms_std,
+    'nms_drop_1': nms_drop_1,
     'nms_drop_2': nms_drop_2
 }
 
-io.savemat(f"{SAVE_PATH}dice_var_2.mat", list_dict)
+io.savemat(f"{SAVE_PATH}dice_var4.mat", list_dict)
