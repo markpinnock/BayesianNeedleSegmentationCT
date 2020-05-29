@@ -18,6 +18,7 @@ EPOCHS = 500
 ETA = 0.001
 DROP_RATE = 0.2
 T = 20
+THRESH = 0.5
 
 FILE_PATH = "C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/"
 DATA_PATH = "Z:/Robot_Data/Test/"
@@ -54,8 +55,9 @@ pred_entropy = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
 
 for img, seg in test_ds.batch(MB_SIZE):
     pred = UNetStandard(img, training=False)
-    pred_mean[:, :, :, :, 0], pred_entropy[:, :, :, :, 0], _ = varDropout(img, UNetDropout, T=T)
-    mean_entropy = np.mean(pred_entropy, axis=(1, 2, 4))
+    pred_mean[:, :, :, :, 0], pred_entropy[:, :, :, :, 0], _ = varDropout(img, UNetDropout, T=T, threshold=None)
+    mean_entropy = np.sum(pred_entropy, axis=(1, 2, 4)) / np.sum(np.logical_or(pred_mean > 0.0, pred_entropy > 0.0), axis=(1, 2, 4))
+
     temp_metric = diceLoss(pred, seg)
     temp_drop_metric = diceLoss(pred_mean, seg)
     test_metric += temp_metric
@@ -71,7 +73,7 @@ for img, seg in test_ds.batch(MB_SIZE):
     rgb_drop[:, :, :, :, 2] = pred_mean[:, :, :, :, 0]
 
     for j in range(1, 2):#range(img.shape[3]):
-        fig, axs = plt.subplots(MB_SIZE, 7)
+        fig, axs = plt.subplots(MB_SIZE, 7, figsize=(18, 10))
 
         for i in range(img.shape[0]):
             axs[i, 0].imshow(np.fliplr(img[i, :, :, j, 0].numpy().T), cmap='gray', vmin=0.12, vmax=0.18, origin='lower')

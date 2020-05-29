@@ -15,7 +15,7 @@ MB_SIZE = 1
 NC = 4
 EPOCHS = 500
 ETA = 0.001
-T = 100
+T = 20
 THRESH = 0.5
 
 FILE_PATH = "C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/"
@@ -81,8 +81,8 @@ nms_drop_2 = []
 
 for img, seg in test_ds.batch(MB_SIZE):
     pred_std = UNetStandard(img, training=False).numpy()
-    pred_drop_1[:, :, :, :, 0], _, _ = varDropout(img, UNetDropout1, T=1)
-    pred_drop_2[:, :, :, :, 0], pred_var[:, :, :, :, 0], _ = varDropout(img, UNetDropout2, T=T)
+    pred_drop_1[:, :, :, :, 0], _, _ = varDropout(img, UNetDropout1, T=1, threshold=None)
+    pred_drop_2[:, :, :, :, 0], pred_entropy[:, :, :, :, 0], _ = varDropout(img, UNetDropout2, T=T, threshold=None)
     pred_std[pred_std < THRESH] = 0
     pred_std[pred_std >= THRESH] = 1
     pred_drop_1[pred_drop_1 < THRESH] = 0
@@ -110,7 +110,11 @@ for img, seg in test_ds.batch(MB_SIZE):
     dist_drop_1.append(haussdorfDistance(pred_drop_1[:, :, :, 1, :], seg[:, :, :, 1, :], pixel_spacing))
     dist_drop_2.append(haussdorfDistance(pred_drop_2[:, :, :, 1, :], seg[:, :, :, 1, :], pixel_spacing))
 
-    var_drop_2.append(pred_var.mean())
+    mean_entropy = np.sum(pred_entropy, axis=(1, 2, 3, 4)) / np.sum(np.logical_or(pred_drop_2 > 0.0, pred_entropy > 0.0), axis=(1, 2, 3, 4))
+    # var_drop_2.append(mean_entropy[0, 1])
+    var_drop_2.append(mean_entropy)
+    nms_std.append(NMSCalc(pred_std[0, :, :, 1, 0], THRESH))
+    nms_drop_1.append(NMSCalc(pred_drop_1[0, :, :, 1, 0], THRESH))
     nms_drop_2.append(NMSCalc(pred_drop_2[0, :, :, 1, 0], THRESH))
 
     print(
