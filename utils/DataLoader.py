@@ -32,7 +32,7 @@ def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, 
 
             final_seg_list = [seg.decode("utf-8") for seg in seg_list if img_name[:-9] in seg.decode("utf-8")]
             final_seg_list.sort()
-            seg_name = final_seg_list[-1]
+            seg_name = final_seg_list[-1] # Toggle for current or last gt
             # seg_name = seg_list[i].decode("utf-8")
             # print(img_name, seg_name)
             seg_vol = np.load(seg_path + seg_name).astype(np.float32)
