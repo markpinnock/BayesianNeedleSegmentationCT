@@ -2,21 +2,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def thresholdImg(im, threshold):
+def threshold_img(im, threshold):
+    """ Thresholds input image """
+    # TODO: likely no longer needed
     im[im < threshold] = 0
     im[im >= threshold] = 1
     return im
 
 
-def maskImg(im, ma_threshold):
+def mask_img(im, ma_threshold):
+    """ Returns mask of image below threshold """
+    # TODO: likely no longer needed
     return np.ma.masked_where(im < ma_threshold, im)
 
 
-def calcMeanEntropy(img_pred, img_entropy):
+def calc_mean_entropy(img_pred, img_entropy):
+    """ Calculates mean entropy weighted by prediction """
     return np.sum(img_entropy) / np.sum(np.logical_or(img_pred > 1e-3, img_entropy > 1e-3))
 
 
-def diceLoss(pred, mask):
+def dice_loss(pred, mask):
+    """ Implementation of Dice score """
     numer = np.sum(pred * mask) * 2
     denom = np.sum(pred) + np.sum(mask) + 1e-6
     dice = numer / denom
@@ -24,9 +30,14 @@ def diceLoss(pred, mask):
     return 1 - dice
 
 
-def haussdorfDistance(pred, mask, pix_sp):
+def haussdorf_distance(pred, mask, pix_sp):
+    """ Implementation of Haussdorf distance:
+        - pred: needle prediction
+        - mask: ground truth segmentation
+        - pix_sp: pixel spacing in mm """
 
     def dist(a, b, pix_sp):
+        # Calculate Euclidean distance in mm
         d = (a - b) * pix_sp
         return np.sqrt(d @ d.T)
 
@@ -42,15 +53,30 @@ def haussdorfDistance(pred, mask, pix_sp):
     return max(d1, d2)
 
 
-def NMSCalc(pred, threshold, pix_sp, test=False):
+def NMS_calc(pred, threshold, pix_sp, test=False):
+
+    """ Implementation of needle morphology score
+        Fits line through needle by least squares and
+        determines deviation from line
+        - pred: needle prediction
+        - threshold: threshold prediction [0, 1]
+        - pix_sp: pixel spacing in mm
+        - test: True/False, tests implementation
+        
+        Returns NMS """
+
+    # Binarise image
     pred[pred < threshold] == 0
     pred[pred >= threshold] == 1
     pred = pred
+
+    # Get x and y coords of points on needle
     temp = np.argwhere(pred == 1.0)
     x = temp[:, 1][:, np.newaxis]
     y = temp[:, 0][:, np.newaxis]
     X = np.concatenate([np.ones(x.shape), x], axis=1)
 
+    # Fit line through needle by least squares
     try:
         Xinv = np.linalg.inv(X.T @ X) @ X.T
     except np.linalg.LinAlgError:
@@ -63,6 +89,7 @@ def NMSCalc(pred, threshold, pix_sp, test=False):
     yb = beta[0] + beta[1] * xb
     err = y - yhat
 
+    # Convert error from fitted line (in y-direction) to orthogonal
     unit_vec = np.array([[xb[1] - xb[0]], [yb[1] - yb[0]]])
     unit_vec /= np.sqrt(unit_vec.T @ unit_vec)
     err_vec = np.concatenate([np.zeros(err.T.shape), err.T], axis=0)
@@ -71,6 +98,8 @@ def NMSCalc(pred, threshold, pix_sp, test=False):
     projv = err_vec - proju
     dist = np.sqrt(np.sum(projv * projv, axis=0))
 
+    # Test implementation visually
+    # TODO: MOVE TO SEPARATE TEST SECTION
     if test:
         test_size = err_vec.shape[1] // 10
         test_err = err_vec[:, 0::test_size]
@@ -120,20 +149,31 @@ def NMSCalc(pred, threshold, pix_sp, test=False):
 
     return (dist.T @ dist) / dist.shape[0]
 
-def trajErrorCalc(pred, mask, threshold, pix_sp, test=False):
+def traj_error_calc(pred, mask, threshold, pix_sp, test=False):
+
+    """ Determines error in trajectory in terms of angle
+        from x-axis and difference in distance from centre of image
+        - pred: predicted needle segmentation
+        - mask: ground truth segmentation
+        - pix_sp: pixel spacing in mm
+        - test: True/False, tests implementation """ 
 
     def dist(a, b, pix_sp):
+        # Calculate Euclidean distance in mm
         d = (a - b) * pix_sp
         return np.sqrt(d @ d.T)
 
+    # Binarise segmentation
     pred[pred < threshold] == 0
     pred[pred >= threshold] == 1
 
+    # Get x and y coords of needle
     temp = np.argwhere(pred == 1.0)
     xp = temp[:, 1][:, np.newaxis]
     yp = temp[:, 0][:, np.newaxis]
     Xp = np.concatenate([np.ones(xp.shape), xp], axis=1)
 
+    # Fit predicted trajectory by least squares
     try:
         Xpinv = np.linalg.inv(Xp.T @ Xp) @ Xp.T
     except np.linalg.LinAlgError:
@@ -144,6 +184,7 @@ def trajErrorCalc(pred, mask, threshold, pix_sp, test=False):
     xb = np.linspace(0, 511, 512)
     ybp = betap[0] + betap[1] * xb
 
+    # Fit ground truth trajectory by least squares
     temp = np.argwhere(mask == 1.0)
     xg = temp[:, 1][:, np.newaxis]
     yg = temp[:, 0][:, np.newaxis]
@@ -152,9 +193,11 @@ def trajErrorCalc(pred, mask, threshold, pix_sp, test=False):
     betag = Xginv @ yg
     ybg = betag[0] + betag[1] * xb
 
+    # Calculate difference in angle subtended by x-axis
     anglep = np.arctan((xb[-1] - xb[0]) / (ybp[-1] - ybp[0])) / np.pi * 180
     angleg = np.arctan((xb[-1] - xb[0]) / (ybg[-1] - ybg[0])) / np.pi * 180
 
+    # Distance of coords to centre of image
     xbt = xb - 255.5
     ybgt = ybg - 255.5
     ybpt = ybp - 255.5
@@ -167,9 +210,12 @@ def trajErrorCalc(pred, mask, threshold, pix_sp, test=False):
     A = np.vstack([xb, ybp]).T
     B = np.vstack([xb, ybg]).T
 
+    # Calculate difference in distances to centre of image
     d1 = max(min(dist(A[i, :], B[j, :], pix_sp) for i in range(A.shape[0])) for j in range(B.shape[0]))
     d2 = max(min(dist(A[i, :], B[j, :], pix_sp) for j in range(B.shape[0])) for i in range(A.shape[0]))
 
+    # Test implementation visually
+    # TODO: MOVE TO SEPARATE TEST SECTION 
     if test:
         print(anglep, angleg, anglep - angleg, dpt[idxp] - dgt[idxg], max(d1, d2))
         plt.figure()

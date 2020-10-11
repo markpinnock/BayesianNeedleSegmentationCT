@@ -4,14 +4,17 @@ import tensorflow as tf
 import time
 
 
-""" Based on work by Tensorflow authors, found at:
+""" Based on work found at:
     https://github.com/daviddao/spatial-transformer-tensorflow/blob/master/spatial_transformer.py """
 
 
-def affineTransformation(input_vol, thetas):
-    """ input_vol: 3D img volume (mb, height, width, depth, nc)
-        thetas: 2x2 matrix for transform (mb, 2, 2) """
-    """ NB: only performs 2D transformations on 3D volume!!! """
+def affine_transformation(input_vol, thetas):
+
+    """ - Implements affine 2D transformation on 3D image volumes
+        - input_vol: 3D img volume (mb, height, width, depth, nc)
+        - thetas: 2x2 matrix for transform (mb, 2, 2) 
+        
+        Returns transformed image volume """
 
     mb_size = input_vol.shape[0]
     height = input_vol.shape[1]
@@ -19,7 +22,7 @@ def affineTransformation(input_vol, thetas):
     depth = input_vol.shape[3]
 
     # Generate flattened coordinates and transform
-    flat_coords = coordGen(mb_size, height, width, depth)
+    flat_coords = coord_gen(mb_size, height, width, depth)
     trans_mat = tf.concat([thetas, tf.zeros([mb_size, 2, 1])], axis=2)
     trans_mat = tf.concat([trans_mat, tf.tile(tf.constant([[[0.0, 0.0, 1.0]]]), [mb_size, 1, 1])], axis=1)
     new_coords = tf.matmul(trans_mat, flat_coords)
@@ -36,9 +39,12 @@ def affineTransformation(input_vol, thetas):
     return output_vol
 
 
-def coordGen(mb_size, height, width, depth):
-    """ Generate coordinates (mb, 3, height * width)
-        3rd dim consists of height * width rows for X, Y and ones """
+def coord_gen(mb_size, height, width, depth):
+
+    """ Generates coordinates (mb_size, 3, height * width)
+        3rd dim consists of height * width rows for X, Y and ones
+        
+        Returns flat pixel coordinates """
     
     height_f = tf.cast(height, tf.float32)
     width_f = tf.cast(width, tf.float32)
@@ -55,7 +61,15 @@ def coordGen(mb_size, height, width, depth):
 
 
 def interpolate(input_vol, X, Y, mb_size):
-    """ Performs interpolation input_vol, using deformation fields X, Y, Z """
+
+    """ Implements interpolation of input image volume,
+        using deformation fields X, Y 
+        - input_vol: input image volume,
+        - X: generated X def field
+        - Y: generated Y def field
+        - mb_size: minibatch size
+    
+        Returns interpolated image volume of dimension 5 """
 
     height = input_vol.shape[1]
     width = input_vol.shape[2]
@@ -131,6 +145,9 @@ def interpolate(input_vol, X, Y, mb_size):
 
 
 if __name__ == "__main__":
+
+    """ Testing of above functions on toy example """
+
     from TransGen import TransMatGen
 
     start_t = time.time()
@@ -138,7 +155,7 @@ if __name__ == "__main__":
     img_vol[:, 40:88, 40:88, :, :] = 1
 
     TestMatGen = TransMatGen()
-    new_vol = affineTransformation(img_vol, TestMatGen.transMatGen(4))
+    new_vol = affine_transformation(img_vol, TestMatGen.transMatGen(4))
     print(time.time() - start_t)
 
     for i in range(0, 3):
@@ -160,7 +177,7 @@ if __name__ == "__main__":
     imgs = np.stack([img1, img2, img3, img4], axis=0)[:, :, :, :, np.newaxis]
 
     TestMatGen2 = TransMatGen()
-    new_imgs = affineTransformation(imgs, TestMatGen.transMatGen(4))
+    new_imgs = affine_transformation(imgs, TestMatGen.transMatGen(4))
     print(time.time() - start_t)
 
     for i in range(0, 3):

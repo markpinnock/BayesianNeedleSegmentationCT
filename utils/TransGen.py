@@ -2,16 +2,12 @@ import tensorflow as tf
 
 
 class TransMatGen:
-    def __init__(self):
-        # if len(img_dims) != 5:
-        #     print(img_dims, file=sys.stderr)
-        #     raise ValueError('Must be 5 image volume dimensions')
-        # else:
-        #     self._img_dims = img_dims
-        pass
-
+    """ Implements affine transformation matrix generator """
+    # TODO: reimplement being able to pass parameters
+    #   - this is simplified version
 
     def flipMat(self, mb_size):
+        # Generates random flip matrix
         flip_mat = tf.round(tf.random.uniform([mb_size, 2, 2], 0, 1))
         flip_mat = (flip_mat * 2) - 1
         flip_mat = flip_mat * tf.tile(tf.eye(2)[tf.newaxis, :, :], [mb_size, 1, 1])
@@ -20,6 +16,7 @@ class TransMatGen:
 
 
     def rotMat(self, mb_size):
+        # Generates random rotation matrix
         thetas = tf.random.uniform([mb_size], -90, 90)
         thetas = thetas / 180 * 3.14159265359
 
@@ -34,6 +31,7 @@ class TransMatGen:
 
 
     def scaleMat(self, mb_size):
+        # Generates random scaling matrix
         z = tf.random.uniform([mb_size], 0.75, 1.25)
         scale_mat = tf.tile(tf.eye(2)[tf.newaxis, :, :], [mb_size, 1, 1])
         scale_mat = (scale_mat * z[:, tf.newaxis, tf.newaxis])
@@ -42,6 +40,9 @@ class TransMatGen:
 
 
     def shearMat(self, phi):
+        # Generates random shear matrix - not currently implemented
+        # TODO: IMPLEMENT
+
         phi = phi / 180 * np.pi
         phi = np.random.uniform(-phi, phi)
 
@@ -59,6 +60,8 @@ class TransMatGen:
 
 
     def transMatGen(self, mb_size):
+        # TODO: REIMPLEMENT
+
         # trans_mat = self._ident_mat
 
         # if flip == None:
@@ -81,6 +84,7 @@ class TransMatGen:
         return trans_mat
 
 if __name__ == "__main__":
+    """ Tests matrix generator using toy example """
     TestMatGen = TransMatGen(4)
     print(TestMatGen.flipMat())
     print(TestMatGen.rotMat())

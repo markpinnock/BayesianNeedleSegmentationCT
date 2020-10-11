@@ -3,23 +3,29 @@ import numpy as np
 import os
 import sys
 import tensorflow as tf
-import tensorflow.keras as keras
 
-sys.path.append('..')
+sys.path.append('../training')
+sys.path.append('../utils')
 
 from Networks import UNetGen
-from utils.DataLoader import imgLoader
-from utils.TrainFuncs import diceLoss, NMSCalc, varDropout
+from DataLoader import img_loader
+from TrainFuncs import dice_loss, NMS_calc, var_dropout
 
 
+""" Inference and testing of standard and variational dropout-equipped UNets """
+
+# Hyperparameters for generating experiment name only
 MB_SIZE = 4
 NC = 4
 EPOCHS = 500
 ETA = 0.001
+
+# Hyperparameters
 DROP_RATE = 0.2
 T = 20
 THRESH = 0.5
 
+# Set up file paths and image lists
 FILE_PATH = "C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/"
 DATA_PATH = "Z:/Robot_Data/Test/"
 # EXPT_NAME = "spatial_dropout"
@@ -38,9 +44,11 @@ assert N == len(segs), "HI/LO IMG PAIRS UNEVEN LENGTHS"
 
 LO_VOL_SIZE = (512, 512, 3, 1, )
 
+# Create test dataset
 test_ds = tf.data.Dataset.from_generator(
-    imgLoader, args=[img_path, seg_path, imgs, segs, False, False], output_types=(tf.float32, tf.float32))
+    img_loader, args=[img_path, seg_path, imgs, segs, False, False, False], output_types=(tf.float32, tf.float32))
 
+# Set up standard UNet models and variational dropout-equipped UNets
 UNetStandard = UNetGen(input_shape=LO_VOL_SIZE, starting_channels=NC, drop_rate=0.0, dropout_flag=False)
 UNetStandard.load_weights(f"{MODEL_SAVE_PATH}{EXPT_NAME}")
 UNetDropout = UNetGen(input_shape=LO_VOL_SIZE, starting_channels=NC, drop_rate=DROP_RATE, dropout_flag=True)
@@ -48,6 +56,7 @@ UNetDropout.load_weights(f"{MODEL_SAVE_PATH}{EXPT_NAME}")
 
 test_metric = 0
 drop_metric = 0
+count = 0
 rgb_pred = np.zeros((MB_SIZE, 512, 512, 3, 3), dtype=np.float32)
 rgb_drop = np.zeros((MB_SIZE, 512, 512, 3, 3), dtype=np.float32)
 pred_mean = np.zeros((MB_SIZE, 512, 512, 3, 1), dtype=np.float32)
@@ -58,12 +67,13 @@ for img, seg in test_ds.batch(MB_SIZE):
     pred_mean[:, :, :, :, 0], pred_entropy[:, :, :, :, 0], _ = varDropout(img, UNetDropout, T=T, threshold=None)
     mean_entropy = np.sum(pred_entropy, axis=(1, 2, 4)) / np.sum(np.logical_or(pred_mean > 0.0, pred_entropy > 0.0), axis=(1, 2, 4))
 
-    temp_metric = diceLoss(pred, seg)
-    temp_drop_metric = diceLoss(pred_mean, seg)
+    temp_metric = dice_loss(pred, seg)
+    temp_drop_metric = dice_loss(pred_mean, seg)
     test_metric += temp_metric
-    drop_metric += temp_drop_metric # This is probably wrong
-    print(pred.shape, seg.shape, pred_mean.shape)
-    print(f"Batch Dice score: {1 - temp_metric / MB_SIZE}, Ensemble Dice score: {1 - temp_drop_metric / MB_SIZE}")
+    drop_metric += temp_drop_metric # TODO: clean up section
+    count += (pred.shape[0] / MB_SIZE)
+
+    print(f"Batch Dice score: {1 - temp_metric}, Ensemble Dice score: {1 - temp_drop_metric}")
 
     rgb_pred[:, :, :, :, 0] = seg[:, :, :, :, 0]
     rgb_pred[:, :, :, :, 1] = pred[:, :, :, :, 0].numpy()
@@ -111,4 +121,4 @@ for img, seg in test_ds.batch(MB_SIZE):
 
         plt.show()
 
-print(f"Final Dice score: {1 - test_metric / N}, Final ensemble Dice score: {1 - drop_metric / N}")
+print(f"Final Dice score: {1 - test_metric / count}, Final ensemble Dice score: {1 - drop_metric / count}")

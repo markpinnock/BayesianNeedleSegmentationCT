@@ -14,11 +14,13 @@ sys.path.append('..')
 sys.path.append('/home/mpinnock/Traj/003_CNN_Bayes_Traj/')
 
 from Networks import UNetGen
-from utils.DataLoader import imgLoader
-from utils.TrainFuncs import trainStep, valStep, varDropout
+from utils.DataLoader import img_loader
+from utils.TrainFuncs import train_step, val_step, var_dropout
 from utils.TransGen import TransMatGen
-from utils.Transformation import affineTransformation
+from utils.Transformation import affine_transformation
 
+
+""" Training script for UNet """
 
 # Handle arguments
 parser = ArgumentParser()
@@ -148,16 +150,17 @@ UNet = UNetGen(input_shape=IMG_SIZE, starting_channels=NC, drop_rate=DROP_RATE)
 
 # Create dataset
 train_ds = tf.data.Dataset.from_generator(
-    imgLoader, args=[img_path, seg_path, img_train, seg_train, priors, True, False], output_types=(tf.float32, tf.float32))
+    img_loader, args=[img_path, seg_path, img_train, seg_train, priors, True, False], output_types=(tf.float32, tf.float32))
 
 if NUM_FOLDS > 0:
     val_ds = tf.data.Dataset.from_generator(
-        imgLoader, args=[img_path, seg_path, img_val, seg_val, priors, False, False], output_types=(tf.float32, tf.float32))
+        img_loader, args=[img_path, seg_path, img_val, seg_val, priors, False, False], output_types=(tf.float32, tf.float32))
 
 if arguments.file_path == None:
     print(UNet.summary())
 
 # Create losses
+# TODO: CONVERT TO METHODS WHEN UNet SUBCLASSED
 train_metric = keras.metrics.BinaryCrossentropy(from_logits=False)
 val_metric = keras.metrics.BinaryCrossentropy(from_logits=False)
 train_metric = 0
@@ -172,18 +175,19 @@ start_time = time.time()
 # Training
 for epoch in range(EPOCHS):
     for img, seg in train_ds.batch(MB_SIZE):
+        # Data augmentation
         if AUG_FLAG:
             trans_mat = DataAug.transMatGen(img.shape[0])
-            img = affineTransformation(img, trans_mat)
-            seg = affineTransformation(seg, trans_mat)
+            img = affine_transformation(img, trans_mat)
+            seg = affine_transformation(seg, trans_mat)
 
-        train_metric += trainStep(img, seg, UNet, Optimiser)
+        train_metric += train_step(img, seg, UNet, Optimiser)
         train_count += 1
 
     # Validation step if required
     if NUM_FOLDS > 0:
         for img, seg in val_ds.batch(MB_SIZE):
-            val_metric += valStep(img, seg, UNet)
+            val_metric += val_step(img, seg, UNet)
             val_count += 1
     else:
         val_count += 1e-6
@@ -201,12 +205,12 @@ rgb_pred = np.zeros((NUM_EX, 512, 512, 3, 3), dtype=np.float32)
 prior_bytes = [vol.encode("utf-8") for vol in priors]
 
 for j in range(NUM_EX):
-    for data in imgLoader(img_path.encode("utf-8"), seg_path.encode("utf-8"), [img_examples[j]], [seg_examples[j]], np.array(prior_bytes), False, True):
+    for data in img_loader(img_path.encode("utf-8"), seg_path.encode("utf-8"), [img_examples[j]], [seg_examples[j]], np.array(prior_bytes), False, True):
         drop_imgs[j, :, :, :, :] = data[0]
         rgb_pred[j, :, :, :, 0] = np.squeeze(data[1])
 
 pred = UNet(drop_imgs, training=False)
-pred_mean, pred_var, _ = varDropout(drop_imgs, UNet, T=100)
+pred_mean, pred_var, _ = var_dropout(drop_imgs, UNet, T=100)
 rgb_pred[:, :, :, :, 1] = pred[:, :, :, :, 0].numpy()
 rgb_pred[:, :, :, :, 2] = pred[:, :, :, :, 0].numpy()
 

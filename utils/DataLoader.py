@@ -9,10 +9,22 @@ sys.path.append('..')
 sys.path.append("C:/Users/roybo/OneDrive - University College London/Collaborations/RobotNeedleSeg/Code/003_CNN_Bayes_Traj/scripts/training/")
 
 from utils.TransGen import TransMatGen
-from utils.Transformation import affineTransformation
+from utils.Transformation import affine_transformation
 
 
-def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, prior_flag=False):
+def img_loader(img_path, seg_path, img_list, seg_list, prior_list=None, shuffle_flag=False, prior_flag=False):
+    
+    """ Implements image loader
+        - img_path: UTF-8 encoded string of image directory
+        - seg_path: UTF-8 encoded string of segmentation directory
+        - img_list: images to be used in dataset
+        - seg_list: segmentations to be used in dataset
+        - prior_list: TODO
+        - shuffle_flag: shuffle dataset e.g. for training (True/False)
+        - prior_flag: TODO
+
+        Returns generator for use in tf.data.Dataset.from_generator """
+
     img_path = img_path.decode("utf-8")
     seg_path = seg_path.decode("utf-8")
 
@@ -32,7 +44,7 @@ def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, 
 
             final_seg_list = [seg.decode("utf-8") for seg in seg_list if img_name[:-9] in seg.decode("utf-8")]
             final_seg_list.sort()
-            seg_name = final_seg_list[-1] # Toggle for current or last gt
+            seg_name = final_seg_list[-1] # TODO Toggle for current or last gt
             # seg_name = seg_list[i].decode("utf-8")
             # print(img_name, seg_name)
             seg_vol = np.load(seg_path + seg_name).astype(np.float32)
@@ -61,9 +73,10 @@ def imgLoader(img_path, seg_path, img_list, seg_list, prior_list, shuffle_flag, 
         finally:
             i += 1
 
-# Data aug
 
 if __name__ == "__main__":
+
+    """ Testing of dataloader using some test examples """
 
     FILE_PATH = "Z:/Robot_Data/Test/"
     img_path = f"{FILE_PATH}Img/"
